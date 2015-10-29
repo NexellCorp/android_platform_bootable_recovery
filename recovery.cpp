@@ -65,6 +65,22 @@ static const struct option OPTIONS[] = {
   { NULL, 0, NULL, 0 },
 };
 
+#ifdef PATCH_NEXELL_AVN
+#define LAST_LOG_FILE "/root/cache/recovery/last_log"
+
+static const char *ROOT_DIR = "/root";
+static const char *CACHE_LOG_DIR = "/root/cache/recovery";
+static const char *COMMAND_FILE = "/root/cache/recovery/command";
+static const char *INTENT_FILE = "/root/cache/recovery/intent";
+static const char *LOG_FILE = "/root/cache/recovery/log";
+static const char *LAST_INSTALL_FILE = "/root/cache/recovery/last_install";
+static const char *LOCALE_FILE = "/root/cache/recovery/last_locale";
+static const char *CACHE_ROOT = "/root/cache";
+static const char *SDCARD_ROOT = "/root/sdcard";
+static const char *TEMPORARY_LOG_FILE = "/tmp/recovery.log";
+static const char *TEMPORARY_INSTALL_FILE = "/tmp/last_install";
+static const char *LAST_KMSG_FILE = "/root/cache/recovery/last_kmsg";
+#else
 #define LAST_LOG_FILE "/cache/recovery/last_log"
 
 static const char *CACHE_LOG_DIR = "/cache/recovery";
@@ -78,6 +94,7 @@ static const char *SDCARD_ROOT = "/sdcard";
 static const char *TEMPORARY_LOG_FILE = "/tmp/recovery.log";
 static const char *TEMPORARY_INSTALL_FILE = "/tmp/last_install";
 static const char *LAST_KMSG_FILE = "/cache/recovery/last_kmsg";
+#endif
 #define KLOG_DEFAULT_LEN (64 * 1024)
 
 #define KEEP_LOG_COUNT 10
@@ -191,7 +208,9 @@ static void
 get_args(int *argc, char ***argv) {
     struct bootloader_message boot;
     memset(&boot, 0, sizeof(boot));
+#ifndef PATCH_NEXELL_AVN
     get_bootloader_message(&boot);  // this may fail, leaving a zeroed structure
+#endif
     stage = strndup(boot.stage, sizeof(boot.stage));
 
     if (boot.command[0] != 0 && boot.command[0] != 255) {
@@ -253,7 +272,9 @@ get_args(int *argc, char ***argv) {
         strlcat(boot.recovery, (*argv)[i], sizeof(boot.recovery));
         strlcat(boot.recovery, "\n", sizeof(boot.recovery));
     }
+#ifndef PATCH_NEXELL_AVN
     set_bootloader_message(&boot);
+#endif
 }
 
 static void
@@ -392,6 +413,7 @@ finish_recovery(const char *send_intent) {
     copy_logs();
 
     // Reset to normal system boot so recovery won't cycle indefinitely.
+#ifndef PATCH_NEXELL_AVN
     struct bootloader_message boot;
     memset(&boot, 0, sizeof(boot));
     set_bootloader_message(&boot);
@@ -401,6 +423,7 @@ finish_recovery(const char *send_intent) {
         (unlink(COMMAND_FILE) && errno != ENOENT)) {
         LOGW("Can't unlink %s\n", COMMAND_FILE);
     }
+#endif
 
     ensure_path_unmounted(CACHE_ROOT);
     sync();  // For good measure.
@@ -978,6 +1001,30 @@ ui_print(const char* format, ...) {
     }
 }
 
+#ifdef PATCH_NEXELL_AVN
+static void nexell_avn_wipe_data(void)
+{
+    ui->SetBackground(RecoveryUI::ERASING);
+    ui->SetProgressType(RecoveryUI::INDETERMINATE);
+    ensure_path_mounted(ROOT_DIR);
+
+    printf("wipe data for Nexell AVN\n");
+    property_set("ctl.start", "wipe_data");
+    sleep(5);
+}
+
+static void nexell_avn_wipe_cache(void)
+{
+    ui->SetBackground(RecoveryUI::ERASING);
+    ui->SetProgressType(RecoveryUI::INDETERMINATE);
+    ensure_path_mounted(ROOT_DIR);
+
+    printf("wipe cache for Nexell AVN\n");
+    property_set("ctl.start", "wipe_cache");
+    sleep(5);
+}
+#endif
+
 int
 main(int argc, char **argv) {
     time_t start = time(NULL);
@@ -1036,9 +1083,11 @@ main(int argc, char **argv) {
         }
     }
 
+#ifndef PATCH_NEXELL_AVN
     if (locale == NULL) {
         load_locale_from_cache();
     }
+#endif
     printf("locale is [%s]\n", locale);
     printf("stage is [%s]\n", stage);
     printf("reason is [%s]\n", reason);
@@ -1119,13 +1168,27 @@ main(int argc, char **argv) {
             }
         }
     } else if (wipe_data) {
+#ifdef PATCH_NEXELL_AVN
+        nexell_avn_wipe_data();
+
+        if (wipe_cache)
+            nexell_avn_wipe_cache();
+
+        status = INSTALL_SUCCESS;
+#else
         if (device->WipeData()) status = INSTALL_ERROR;
         if (erase_volume("/data")) status = INSTALL_ERROR;
         if (wipe_cache && erase_volume("/cache")) status = INSTALL_ERROR;
+#endif
         if (status != INSTALL_SUCCESS) ui->Print("Data wipe failed.\n");
     } else if (wipe_cache) {
+#ifdef PATCH_NEXELL_AVN
+        nexell_avn_wipe_cache();
+        status = INSTALL_SUCCESS;
+#else
         if (wipe_cache && erase_volume("/cache")) status = INSTALL_ERROR;
         if (status != INSTALL_SUCCESS) ui->Print("Cache wipe failed.\n");
+#endif
     } else if (!just_exit) {
         status = INSTALL_NONE;  // No command specified
         ui->SetBackground(RecoveryUI::NO_COMMAND);
@@ -1145,7 +1208,7 @@ main(int argc, char **argv) {
     finish_recovery(send_intent);
 
     // psw0523 fix for debugging
-#if 0
+// #if 0
     switch (after) {
         case Device::SHUTDOWN:
             ui->Print("Shutting down...\n");
@@ -1162,7 +1225,7 @@ main(int argc, char **argv) {
             property_set(ANDROID_RB_PROPERTY, "reboot,");
             break;
     }
-#endif
+// #endif
     sleep(5); // should reboot before this finishes
     return EXIT_SUCCESS;
 }

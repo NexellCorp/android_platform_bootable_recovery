@@ -29,6 +29,9 @@ include $(BUILD_STATIC_LIBRARY)
 
 include $(CLEAR_VARS)
 
+# psw0523 add for Nexell AVN
+LOCAL_CFLAGS += -DPATCH_NEXELL_AVN
+
 LOCAL_SRC_FILES := \
     recovery.cpp \
     bootloader.cpp \

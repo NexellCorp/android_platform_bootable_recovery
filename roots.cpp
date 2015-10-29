@@ -274,10 +274,12 @@ int setup_install_mounts() {
 
         if (strcmp(v->mount_point, "/tmp") == 0 ||
             strcmp(v->mount_point, "/cache") == 0) {
+#ifndef PATCH_NEXELL_AVN
             if (ensure_path_mounted(v->mount_point) != 0) {
                 LOGE("failed to mount %s\n", v->mount_point);
                 return -1;
             }
+#endif
 
         } else {
             if (ensure_path_unmounted(v->mount_point) != 0) {
