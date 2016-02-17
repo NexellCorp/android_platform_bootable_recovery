@@ -70,7 +70,7 @@ static const char *LOG_FILE = "/root/cache/recovery/log";
 static const char *LAST_INSTALL_FILE = "/root/cache/recovery/last_install";
 static const char *LOCALE_FILE = "/root/cache/recovery/last_locale";
 static const char *CACHE_ROOT = "/root/cache";
-static const char *SDCARD_ROOT = "/root/sdcard";
+static const char *SDCARD_ROOT = "/sdcard";
 static const char *TEMPORARY_LOG_FILE = "/tmp/recovery.log";
 static const char *TEMPORARY_INSTALL_FILE = "/tmp/last_install";
 static const char *SIDELOAD_TEMP_DIR = "/tmp/sideload";
@@ -257,13 +257,39 @@ get_args(int *argc, char ***argv) {
 #endif
 }
 
+#ifdef PATCH_NEXELL_AVN
+static void nexell_avn_wipe_data(void)
+{
+    ui->SetBackground(RecoveryUI::ERASING);
+    ui->SetProgressType(RecoveryUI::INDETERMINATE);
+    ensure_path_mounted(ROOT_DIR);
+
+    printf("wipe data for Nexell AVN\n");
+    property_set("ctl.start", "wipe_data");
+    sleep(5);
+}
+
+static void nexell_avn_wipe_cache(void)
+{
+    ui->SetBackground(RecoveryUI::ERASING);
+    ui->SetProgressType(RecoveryUI::INDETERMINATE);
+    ensure_path_mounted(ROOT_DIR);
+
+    printf("wipe cache for Nexell AVN\n");
+    property_set("ctl.start", "wipe_cache");
+    sleep(5);
+}
+#endif
+
 static void
 set_sdcard_update_bootloader_message() {
     struct bootloader_message boot;
     memset(&boot, 0, sizeof(boot));
     strlcpy(boot.command, "boot-recovery", sizeof(boot.command));
     strlcpy(boot.recovery, "recovery\n", sizeof(boot.recovery));
+#ifndef	PATCH_NEXELL_AVN
     set_bootloader_message(&boot);
+#endif
 }
 
 // How much of the temp log we have copied to the copy in cache.
@@ -354,7 +380,9 @@ finish_recovery(const char *send_intent) {
     // Reset to normal system boot so recovery won't cycle indefinitely.
     struct bootloader_message boot;
     memset(&boot, 0, sizeof(boot));
+#ifndef	PATCH_NEXELL_AVN
     set_bootloader_message(&boot);
+#endif
 
     // Remove the command file, so recovery won't repeat indefinitely.
     if (ensure_path_mounted(COMMAND_FILE) != 0 ||
@@ -783,9 +811,15 @@ wipe_data(int confirm, Device* device) {
     }
 
     ui->Print("\n-- Wiping data...\n");
+
+	#ifdef PATCH_NEXELL_AVN
+	nexell_avn_wipe_data();
+    nexell_avn_wipe_cache();				
+	#else
     device->WipeData();
     erase_volume("/data");
     erase_volume("/cache");
+	#endif
     ui->Print("Data wipe complete.\n");
 }
 
@@ -821,13 +855,24 @@ prompt_and_wait(Device* device, int status) {
                 return;
 
             case Device::WIPE_DATA:
+                ui->Print("\n-- Wiping data...\n");
+			#ifdef PATCH_NEXELL_AVN
+		        nexell_avn_wipe_data();
+    			nexell_avn_wipe_cache();				
+			#else
                 wipe_data(ui->IsTextVisible(), device);
+			#endif
+                ui->Print("data wipe complete.\n");
                 if (!ui->IsTextVisible()) return;
                 break;
 
             case Device::WIPE_CACHE:
                 ui->Print("\n-- Wiping cache...\n");
+			#ifdef PATCH_NEXELL_AVN
+		        nexell_avn_wipe_cache();
+			#else
                 erase_volume("/cache");
+			#endif
                 ui->Print("Cache wipe complete.\n");
                 if (!ui->IsTextVisible()) return;
                 break;
@@ -836,11 +881,15 @@ prompt_and_wait(Device* device, int status) {
                 status = update_directory(SDCARD_ROOT, SDCARD_ROOT, &wipe_cache, device);
                 if (status == INSTALL_SUCCESS && wipe_cache) {
                     ui->Print("\n-- Wiping cache (at package request)...\n");
+				#ifdef PATCH_NEXELL_AVN
+			        nexell_avn_wipe_cache();
+				#else
                     if (erase_volume("/cache")) {
                         ui->Print("Cache wipe failed.\n");
                     } else {
                         ui->Print("Cache wipe complete.\n");
                     }
+				#endif
                 }
                 if (status >= 0) {
                     if (status != INSTALL_SUCCESS) {
@@ -859,11 +908,15 @@ prompt_and_wait(Device* device, int status) {
                 status = update_directory(CACHE_ROOT, NULL, &wipe_cache, device);
                 if (status == INSTALL_SUCCESS && wipe_cache) {
                     ui->Print("\n-- Wiping cache (at package request)...\n");
+				#ifdef PATCH_NEXELL_AVN
+			        nexell_avn_wipe_cache();
+				#else
                     if (erase_volume("/cache")) {
                         ui->Print("Cache wipe failed.\n");
                     } else {
                         ui->Print("Cache wipe complete.\n");
                     }
+				#endif
                 }
                 if (status >= 0) {
                     if (status != INSTALL_SUCCESS) {
@@ -937,29 +990,6 @@ ui_print(const char* format, ...) {
     }
 }
 
-#ifdef PATCH_NEXELL_AVN
-static void nexell_avn_wipe_data(void)
-{
-    ui->SetBackground(RecoveryUI::ERASING);
-    ui->SetProgressType(RecoveryUI::INDETERMINATE);
-    ensure_path_mounted(ROOT_DIR);
-
-    printf("wipe data for Nexell AVN\n");
-    property_set("ctl.start", "wipe_data");
-    sleep(5);
-}
-
-static void nexell_avn_wipe_cache(void)
-{
-    ui->SetBackground(RecoveryUI::ERASING);
-    ui->SetProgressType(RecoveryUI::INDETERMINATE);
-    ensure_path_mounted(ROOT_DIR);
-
-    printf("wipe cache for Nexell AVN\n");
-    property_set("ctl.start", "wipe_cache");
-    sleep(5);
-}
-#endif
 
 int
 main(int argc, char **argv) {

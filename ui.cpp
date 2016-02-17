@@ -37,6 +37,7 @@
 #include "ui.h"
 
 #define UI_WAIT_KEY_TIMEOUT_SEC    120
+#define TOUCH_MID_ABS_Y			2034
 
 // There's only (at most) one of these objects, and global callbacks
 // (for pthread_create, and the input event system) need to find it,
@@ -68,14 +69,18 @@ int RecoveryUI::input_callback(int fd, short revents, void* data)
     if (ret)
         return -1;
 
+	//printf("%s : ev.type = %d ev.code = %d value = %d \n", __func__, ev.type, ev.code, ev.value);
+
     if (ev.type == EV_SYN) {
         return 0;
-    } else if (ev.type == EV_REL) {
+    //} else if (ev.type == EV_REL) {
+    } else if (ev.type == EV_ABS) {
         if (ev.code == REL_Y) {
             // accumulate the up or down motion reported by
             // the trackball.  When it exceeds a threshold
             // (positive or negative), fake an up/down
             // key event.
+			#if 0
             self->rel_sum += ev.value;
             if (self->rel_sum > 3) {
                 self->process_key(KEY_DOWN, 1);   // press down key
@@ -86,13 +91,30 @@ int RecoveryUI::input_callback(int fd, short revents, void* data)
                 self->process_key(KEY_UP, 0);     // and release it
                 self->rel_sum = 0;
             }
+			#else
+			//self->rel_sum += ev.value;
+			self->rel_sum ++;
+			if(self->rel_sum > 3) {
+				if(ev.value < TOUCH_MID_ABS_Y ) {
+					self->process_key(KEY_DOWN, 1);   // press down key
+    		        self->process_key(KEY_DOWN, 0);   // and release it
+                	self->rel_sum = 0;
+				}
+				else {
+                	self->process_key(KEY_UP, 1);     // press up key
+	                self->process_key(KEY_UP, 0);     // and release it
+                	self->rel_sum = 0;
+				}
+			}
+			#endif
         }
     } else {
         self->rel_sum = 0;
     }
 
-    if (ev.type == EV_KEY && ev.code <= KEY_MAX)
+    if (ev.code != BTN_TOUCH && ev.type == EV_KEY && ev.code <= KEY_MAX) {
         self->process_key(ev.code, ev.value);
+	}
 
     return 0;
 }
