@@ -15,7 +15,8 @@ on init
     mkdir /sdcard
     mkdir /system
     mkdir /data
-    symlink /root/cache /cache
+	mkdir /cache
+    #symlink /root/cache /cache
     mount /tmp /tmp tmpfs
 
     chown root shell /tmp
