@@ -16,6 +16,8 @@ on init
     mkdir /system
     mkdir /data
 	mkdir /cache
+	mkdir /vendor
+	mkdir /ota
     #symlink /root/cache /cache
     mount /tmp /tmp tmpfs
 

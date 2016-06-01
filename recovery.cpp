@@ -85,6 +85,7 @@ static const char *LAST_INSTALL_FILE = "/cache/recovery/last_install";
 static const char *LOCALE_FILE = "/cache/recovery/last_locale";
 static const char *CACHE_ROOT = "/cache";
 static const char *SDCARD_ROOT = "/sdcard";
+static const char *EMMC_OTA = "/ota";
 static const char *TEMPORARY_LOG_FILE = "/tmp/recovery.log";
 static const char *TEMPORARY_INSTALL_FILE = "/tmp/last_install";
 static const char *SIDELOAD_TEMP_DIR = "/tmp/sideload";
@@ -902,6 +903,33 @@ prompt_and_wait(Device* device, int status) {
                     }
                 }
                 break;
+
+            case Device::APPLY_INTERNAL:
+                status = update_directory(EMMC_OTA, EMMC_OTA, &wipe_cache, device);
+                if (status == INSTALL_SUCCESS && wipe_cache) {
+                    ui->Print("\n-- Wiping cache (at package request)...\n");
+                #ifdef PATCH_NEXELL_AVN
+                    nexell_avn_wipe_cache();
+                #else
+                    if (erase_volume("/cache")) {
+                        ui->Print("Cache wipe failed.\n");
+                    } else {
+                        ui->Print("Cache wipe complete.\n");
+                    }
+                #endif
+                }
+                if (status >= 0) {
+                    if (status != INSTALL_SUCCESS) {
+                        ui->SetBackground(RecoveryUI::ERROR);
+                        ui->Print("Installation aborted.\n");
+                    } else if (!ui->IsTextVisible()) {
+                        return;  // reboot if logs aren't visible
+                    } else {
+                        ui->Print("\nInstall from sdcard complete.\n");
+                    }
+                }
+                break;
+
 
             case Device::APPLY_CACHE:
                 // Don't unmount cache at the end of this.
