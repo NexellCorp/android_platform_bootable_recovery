@@ -115,6 +115,14 @@ int ensure_path_mounted(const char* path) {
         result = mount(v->blk_device, v->mount_point, v->fs_type,
                        MS_NOATIME | MS_NODEV | MS_NODIRATIME, "");
         if (result == 0) return 0;
+		else {
+            if (strcmp(v->blk_device, "/dev/block/platform/dw_mmc.2/by-num/p1") == 0) {
+                result = mount("/dev/block/platform/dw_mmc.1/by-num/p1", v->mount_point, v->fs_type,
+                           MS_NOATIME | MS_NODEV | MS_NODIRATIME, "");
+                if (result == 0)
+                    return 0;
+            }
+         }
 
         LOGE("failed to mount %s (%s)\n", v->mount_point, strerror(errno));
         return -1;
@@ -280,7 +288,6 @@ int setup_install_mounts() {
                 return -1;
             }
 #endif
-
         } else {
             if (ensure_path_unmounted(v->mount_point) != 0) {
                 LOGE("failed to unmount %s\n", v->mount_point);
