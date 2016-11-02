@@ -22,7 +22,7 @@ on init
     mkdir /sdcard
     mkdir /system
     mkdir /data
-    symlink /root/cache /cache
+    mkdir /cache
     mkdir /sideload
     mount tmpfs tmpfs /tmp
 

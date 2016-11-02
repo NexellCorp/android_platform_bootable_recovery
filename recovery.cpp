@@ -1029,8 +1029,7 @@ int
 main(int argc, char **argv) {
     time_t start = time(NULL);
 
-    // psw0523 debugging
-    // redirect_stdio(TEMPORARY_LOG_FILE);
+    redirect_stdio(TEMPORARY_LOG_FILE);
 
     // If this binary is started with the single argument "--adbd",
     // instead of being the normal recovery binary, it turns into kind
@@ -1207,8 +1206,6 @@ main(int argc, char **argv) {
     // Save logs and clean up before rebooting or shutting down.
     finish_recovery(send_intent);
 
-    // psw0523 fix for debugging
-// #if 0
     switch (after) {
         case Device::SHUTDOWN:
             ui->Print("Shutting down...\n");
@@ -1225,7 +1222,6 @@ main(int argc, char **argv) {
             property_set(ANDROID_RB_PROPERTY, "reboot,");
             break;
     }
-// #endif
     sleep(5); // should reboot before this finishes
     return EXIT_SUCCESS;
 }
