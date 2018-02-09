@@ -99,6 +99,7 @@ static const char *CACHE_LOG_DIR = "/cache/recovery";
 static const char *COMMAND_FILE = "/cache/recovery/command";
 static const char *INTENT_FILE = "/cache/recovery/intent";
 static const char *LOG_FILE = "/cache/recovery/log";
+static const char *MASK_FILE = "/cache/recovery/factory_mask";
 static const char *LAST_INSTALL_FILE = "/cache/recovery/last_install";
 static const char *LOCALE_FILE = "/cache/recovery/last_locale";
 static const char *CONVERT_FBE_DIR = "/tmp/convert_fbe";
@@ -564,6 +565,12 @@ finish_recovery(const char *send_intent) {
         }
         ensure_path_unmounted(CACHE_ROOT);
     }
+
+    FILE* mf = fopen_path(MASK_FILE, "w");
+    fwrite("fa",1,3,mf);
+    fflush(mf);
+    fsync(fileno(mf));
+    check_and_fclose(mf, MASK_FILE);
 
     sync();  // For good measure.
 }
