@@ -33,7 +33,7 @@ cc_binary {
         "liblog",
     ],
 
-    init_rc: [
-        "uncrypt.rc",
-    ],
+    //init_rc: [
+    //    "uncrypt.rc",
+    //],
 }
