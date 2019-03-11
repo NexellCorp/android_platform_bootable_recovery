@@ -217,7 +217,7 @@ LOCAL_SRC_FILES := \
 LOCAL_MODULE := recovery-persist
 LOCAL_SHARED_LIBRARIES := liblog libbase
 LOCAL_CFLAGS := -Wall -Werror
-LOCAL_INIT_RC := recovery-persist.rc
+# LOCAL_INIT_RC := recovery-persist.rc
 include $(BUILD_EXECUTABLE)
 
 # recovery-refresh (system partition dynamic executable run at init)
@@ -229,7 +229,7 @@ LOCAL_SRC_FILES := \
 LOCAL_MODULE := recovery-refresh
 LOCAL_SHARED_LIBRARIES := liblog libbase
 LOCAL_CFLAGS := -Wall -Werror
-LOCAL_INIT_RC := recovery-refresh.rc
+# LOCAL_INIT_RC := recovery-refresh.rc
 include $(BUILD_EXECUTABLE)
 
 # libverifier (static library)
